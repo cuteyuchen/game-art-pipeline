@@ -1,0 +1,4 @@
+interface:
+  display_name: "Game Art Pipeline"
+  short_description: "Generate, QA, package, and integrate reusable 2D game art"
+  default_prompt: "Use $game-art-pipeline to produce game-ready art using the current project's art profile, references, QA gates, and engine adapter."
