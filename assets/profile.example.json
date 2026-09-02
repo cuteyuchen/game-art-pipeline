@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "project": {"name": "example-game"},
+  "engine": {"type": "engine-neutral", "version": null, "adapter": "auto", "instructions_file": null},
+  "generation": {"preferred": "auto", "fallbacks": []},
+  "art_direction": {"style_file": ".game-art/style.md", "camera_file": null, "additional_files": []},
+  "paths": {"runs": ".game-art/runs", "source_assets": ".game-art/source", "runtime_assets": "assets"},
+  "defaults": {"format": "png", "background": "transparent"},
+  "review": {"canonical_gate": true, "visual_qa": true, "engine_preview_gate": true}
+}

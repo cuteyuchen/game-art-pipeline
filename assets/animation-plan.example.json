@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "anchor": "feet",
+  "animations": [
+    {"id": "idle", "purpose": "subtle readable idle loop", "frames": 4, "durations_ms": [180, 140, 140, 180], "loop": true},
+    {"id": "move", "purpose": "forward locomotion matching the game camera", "frames": 6, "durations_ms": 120, "loop": true},
+    {"id": "hurt", "purpose": "short damage reaction without changing identity", "frames": 3, "durations_ms": [70, 90, 130], "loop": false}
+  ]
+}
