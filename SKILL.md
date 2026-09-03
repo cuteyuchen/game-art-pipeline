@@ -1,6 +1,6 @@
 ---
 name: game-art-pipeline
-description: "Produce, validate, package, and optionally integrate reusable 2D game art through a project-configurable pipeline. Use when Codex or ChatGPT needs to create or update game sprites, animated sprites, UI sprites, effects, modular or layered 2D assets, sprite sheets, atlases, or engine-ready art from text and visual references; when it must preserve a canonical visual identity across derived assets; or when generated art must be imported into a game engine and verified with deterministic QA. The skill is project-agnostic: read the target project .game-art/profile.json and art-direction files instead of hard-coding a game camera, palette, generator, paths, or engine."
+description: "Produce, validate, package, and optionally integrate reusable 2D game art through a project-configurable pipeline. Use when Codex or ChatGPT needs to create or update game sprites, animated sprites, UI sprites, effects, modular or layered 2D assets, sprite sheets, atlases, or engine-ready art from text and visual references; when it must preserve a canonical visual identity across derived assets; when generated art must be imported into a game engine and verified with deterministic QA; or when a partially completed engine handoff must resume after AssetDB, MCP, animation-authoring, or preview failures. The skill is project-agnostic: read the target project .game-art/profile.json and art-direction files instead of hard-coding a game camera, palette, generator, paths, or engine."
 ---
 
 # Game Art Pipeline
@@ -13,13 +13,14 @@ Run a reusable art-production pipeline that separates creative image generation 
 
 - Treat generated pixels and deterministic processing as separate stages.
 - Use a real image-generation capability for requested art. Never substitute PIL, Canvas, SVG, HTML/CSS, primitives, or procedural drawing for final creative art.
-- Use scripts only for deterministic work such as manifests, validation, background cleanup, alignment, slicing, contact sheets, hashing, and packaging.
+- Use scripts only for deterministic work such as manifests, validation, background cleanup, alignment, slicing, contact sheets, hashing, packaging, and integration journals.
 - Preserve provenance: record generator/tool, model when known, prompt file, source references, selected source file, processing steps, and final files.
 - Prefer a canonical reference before generating identity-sensitive derivatives.
 - Generate the smallest coherent visual unit. Do not ask an image model to invent a large mixed-action atlas, a full UI system, or unrelated variants in one image when those parts require consistency.
 - Reuse accepted source art for variants and edits. Do not independently redesign layers that must align in-engine.
 - Respect the target project's existing dirty files and engine-generated metadata. Do not reset, clean, mass-restore, or overwrite unrelated work.
 - Treat deterministic checks as necessary but not sufficient. Perform visual QA on contact sheets or engine previews before calling an asset final.
+- Treat engine integration as resumable. Never regenerate accepted art merely because AssetDB, MCP, Prefab, animation, or preview operations timed out.
 
 ## Project Discovery
 
@@ -41,8 +42,10 @@ Read `references/project-profile.md` for the profile schema and inheritance rule
 6. Generate coherent derivatives using the task reference: `static-sprite.md`, `animated-sprite.md`, `ui.md`, or `fx.md`.
 7. Process accepted art deterministically: alpha/chroma cleanup, alignment, normalization, slicing, atlas assembly, or metadata only as needed.
 8. Validate with `scripts/validate_image.py`, contact sheets when useful, `scripts/validate_run.py`, and `references/qa.md`.
-9. Integrate into the target engine when requested using `references/engine-adapters.md`. Prefer live Editor/MCP/official import paths over hand-authored engine metadata.
-10. Finalize the manifest and report canonical source, generated sources, runtime assets, QA evidence, engine readback, warnings, and remaining gates.
+9. If engine integration is requested, initialize or resume `engine-handoff.json` with `scripts/engine_handoff.py`; do not restart art generation when integration is partial.
+10. Integrate using `references/engine-adapters.md`. If the engine is Cocos Creator, also load `references/cocos-creator.md` and follow its capability tiers, AssetDB retry/readback loop, SpriteFrame discovery, and animation fallbacks.
+11. Read back imported assets, runtime objects, animation state, and preview evidence before calling the run integrated.
+12. Finalize the manifest and report canonical source, generated sources, runtime assets, QA evidence, engine readback, warnings, and remaining gates.
 
 ## Canonical Reference Gate
 
@@ -60,7 +63,16 @@ Record adapter/tool, model when known, prompt path, reference roles, selected so
 
 The pipeline must remain useful without an engine adapter. If live integration is unavailable, finish with engine-neutral PNG/WebP/atlas/manifest outputs and an exact handoff contract.
 
-For Cocos Creator, prefer an existing project MCP/editor extension or AssetDB workflow. Do not guess UUIDs or hand-author `.meta`, `.prefab`, or `.scene` internals when a safe editor path is available.
+Engine integration must be idempotent and resumable:
+
+- create `engine-handoff.json` before live mutations;
+- import in bounded batches instead of one long blocking operation when the engine/editor is timeout-prone;
+- distinguish mutation timeout from confirmed failure by readback;
+- record stable engine references only after querying them back;
+- resume from incomplete handoff entries after reconnect/restart;
+- prefer capability fallback within the existing engine/editor bridge before installing another integration layer.
+
+For Cocos Creator, prefer an existing project MCP/editor extension or AssetDB workflow. Do not guess UUIDs or hand-author `.meta`, `.prefab`, `.scene`, or AnimationClip serialization when a safe editor path is available. If dedicated AnimationClip authoring is missing, use the Editor/scene script bridge or the bundled sprite-sequence fallback as described in `references/cocos-creator.md`.
 
 ## Run Artifacts
 
@@ -76,6 +88,8 @@ Default run shape:
   processed/
   final/
   qa/
+  animations.json        # optional for animated sprites
+  engine-handoff.json    # optional until engine integration starts
 ```
 
 Do not leave final project-referenced art only in a generator cache or temporary directory.
@@ -88,11 +102,17 @@ Do not leave final project-referenced art only in a generator cache or temporary
 - `scripts/approve_canonical.py` — mark an existing run image as the approved canonical reference.
 - `scripts/process_sprite.py` — deterministic alpha/chroma cleanup and optional canvas normalization; requires Pillow.
 - `scripts/slice_grid.py` — slice equal-cell sprite grids and write frame metadata; requires Pillow.
+- `scripts/build_animation_manifest.py` — turn an animation plan plus final PNG frames into engine-neutral frame order/timing metadata.
 - `scripts/record_final_asset.py` — copy a runtime-ready asset into `final/` and register it.
 - `scripts/validate_image.py` — inspect image dimensions, format, alpha information, and SHA-256.
 - `scripts/build_contact_sheet.py` — assemble labeled QA contact sheets; requires Pillow.
+- `scripts/engine_handoff.py` — create, resume, record, and validate engine integration without coupling to one MCP implementation.
 - `scripts/validate_run.py` — validate run contracts and required files for a lifecycle phase.
 
 ## Completion States
 
-Report `PASS`, `PARTIAL`, or `BLOCKED`. Do not label a run `PASS` merely because an image was generated. `PASS` requires requested final assets, deterministic QA, visual QA, and requested engine integration/readback when applicable.
+Report `PASS`, `PARTIAL`, or `BLOCKED`. Do not label a run `PASS` merely because an image was generated.
+
+- Art-only `PASS` requires requested final assets, deterministic QA, and required visual QA.
+- Engine-integrated `PASS` additionally requires successful imports, required engine references, runtime-object readback, and preview evidence when the project profile requires it.
+- A valid art run with incomplete engine integration is `PARTIAL`, not failed art. Preserve the accepted art and resume the handoff.
