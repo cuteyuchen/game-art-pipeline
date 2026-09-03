@@ -38,12 +38,30 @@ def main() -> int:
     profile = {
         "schema_version": 1,
         "project": {"name": args.name},
-        "engine": {"type": args.engine, "version": args.engine_version, "adapter": "auto", "instructions_file": None},
+        "engine": {
+            "type": args.engine,
+            "version": args.engine_version,
+            "adapter": "auto",
+            "instructions_file": None,
+            "options": {},
+        },
         "generation": {"preferred": args.generator, "fallbacks": []},
-        "art_direction": {"style_file": ".game-art/style.md", "camera_file": None, "additional_files": []},
-        "paths": {"runs": ".game-art/runs", "source_assets": ".game-art/source", "runtime_assets": args.runtime_assets},
+        "art_direction": {
+            "style_file": ".game-art/style.md",
+            "camera_file": None,
+            "additional_files": [],
+        },
+        "paths": {
+            "runs": ".game-art/runs",
+            "source_assets": ".game-art/source",
+            "runtime_assets": args.runtime_assets,
+        },
         "defaults": {"format": "png", "background": "transparent"},
-        "review": {"canonical_gate": True, "visual_qa": True, "engine_preview_gate": True},
+        "review": {
+            "canonical_gate": True,
+            "visual_qa": True,
+            "engine_preview_gate": True,
+        },
     }
 
     profile_path = cfg / "profile.json"
@@ -53,8 +71,16 @@ def main() -> int:
         profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"WRITE: {profile_path}")
 
-    write_text(cfg / "style.md", "# Project Art Direction\n\nDescribe visual style, palette, shape language, materials, readability targets, and explicit avoidances here.\n", args.force)
-    write_text(cfg / "README.md", "# .game-art\n\nProject-local configuration and auditable art-production runs used by game-art-pipeline.\n", args.force)
+    write_text(
+        cfg / "style.md",
+        "# Project Art Direction\n\nDescribe the project's visual style, palette, shape language, materials, readability targets, and explicit avoidances here.\n",
+        args.force,
+    )
+    write_text(
+        cfg / "README.md",
+        "# .game-art\n\nProject-local configuration and auditable art-production runs used by the reusable game-art-pipeline skill.\n",
+        args.force,
+    )
     return 0
 
 
