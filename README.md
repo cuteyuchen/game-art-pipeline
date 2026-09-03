@@ -11,12 +11,12 @@ creative image generation
       ↓
 deterministic processing + QA
       ↓
-engine integration + readback
+resumable engine integration + readback
 ```
 
 The repository itself is a valid `game-art-pipeline` Skill. Project-specific rules live in each game's `.game-art/` directory.
 
-## Initial scope
+## Scope
 
 - Static and modular/layered sprites
 - Animated sprites and sprite sheets
@@ -25,13 +25,16 @@ The repository itself is a valid `game-art-pipeline` Skill. Project-specific rul
 - Canonical-reference consistency gates
 - Provenance manifests and deterministic QA
 - Engine-neutral handoff
-- Cocos Creator integration guidance through whatever safe Editor/MCP workflow the target project already exposes
+- Resumable engine integration journals
+- Cocos Creator AssetDB/SpriteFrame/animation/Prefab/preview workflow with capability fallbacks
 
-The Skill deliberately does **not** hard-code Cocos, one image model, one resolution, a specific camera, or a specific art style.
+The Skill deliberately does **not** hard-code one image model, one resolution, a specific camera, a specific art style, one Cocos MCP implementation, or one engine.
 
 ## Install
 
 Place this repository directory where your agent can discover Skills, for example a global Codex Skills directory or a project's `.codex/skills/game-art-pipeline/` directory.
+
+A packaged `skill.zip` can also be produced with the OpenAI Skill Creator packaging workflow.
 
 ## Bootstrap a game project
 
@@ -72,6 +75,10 @@ Use game-art-pipeline to create primary and secondary button sprites from this p
 Use game-art-pipeline to create one canonical modular turret, derive aligned base/body/barrel layers from it, rebuild a composition preview, then integrate the layers into the project.
 ```
 
+```text
+Resume this run's engine handoff after the Cocos AssetDB timeout. Do not regenerate accepted frames; import unresolved files in small batches, resolve SpriteFrames, use the best available animation tier, and finish preview readback.
+```
+
 ## Design notes
 
 The workflow is informed by production patterns seen in canonical-reference sprite pipelines such as OpenAI's `hatch-pet` and community game-sprite workflows: generate identity-bearing art from an accepted base, keep visual jobs small and coherent, perform deterministic assembly separately, and repair the smallest failing scope.
@@ -80,4 +87,41 @@ No third-party Skill code is vendored here. This repository implements its own g
 
 ## Deterministic helper flow
 
-A typical run can use `prepare_run.py` → `record_generation.py` → `approve_canonical.py` → `process_sprite.py` / `slice_grid.py` → `record_final_asset.py` → `validate_run.py`. Creative pixels still come only from the selected image generator; these helpers manage files, provenance, cleanup, frames, and QA contracts.
+A typical art run can use:
+
+```text
+prepare_run.py
+→ record_generation.py
+→ approve_canonical.py
+→ process_sprite.py / slice_grid.py
+→ build_animation_manifest.py
+→ record_final_asset.py
+→ validate_run.py --phase final
+```
+
+Creative pixels still come only from the selected image generator.
+
+When live engine integration starts, use a separate resumable journal:
+
+```text
+engine_handoff.py init
+→ bounded engine imports + readback
+→ record-import
+→ record-animation
+→ record-runtime
+→ record-preview
+→ engine_handoff.py validate
+→ validate_run.py --phase integrated
+```
+
+This prevents engine/MCP timeouts from invalidating already accepted art.
+
+## Cocos Creator fallback model
+
+For Cocos Creator, `references/cocos-creator.md` defines three integration tiers:
+
+1. dedicated asset/SpriteFrame/AnimationClip/Prefab tools;
+2. trusted Editor/scene script bridge through existing project tooling;
+3. bundled `GameArtSpriteSequenceAnimator.ts` runtime fallback when AnimationClip authoring is unavailable.
+
+The adapter imports frame sets in bounded batches, resolves SpriteFrame subassets by readback, and requires Preview evidence before an integrated run is complete when the project profile enables that gate.
