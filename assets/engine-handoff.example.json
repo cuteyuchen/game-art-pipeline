@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "engine_type": "cocos-creator",
+  "adapter": "auto",
+  "adapter_tier": null,
+  "status": "prepared",
+  "policy": {
+    "import_batch_size": 4,
+    "import_timeout_seconds": 30,
+    "import_max_retries": 2,
+    "animation_strategy": "auto",
+    "allow_runtime_sequence_fallback": true
+  },
+  "imports": [],
+  "animations": [],
+  "runtime_object": {
+    "status": "pending",
+    "path": null,
+    "uuid": null,
+    "readback": null
+  },
+  "preview": {
+    "status": "pending",
+    "path": null,
+    "instances": 0,
+    "console_errors": null,
+    "console_warnings": null,
+    "note": null
+  },
+  "notes": []
+}
